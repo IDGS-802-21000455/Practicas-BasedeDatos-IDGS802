@@ -1,0 +1,16 @@
+{% extends 'layout2.html' %}
+
+{% block content %}
+    <h1>Confirmación de Pedido</h1>
+    <p>El costo total del pedido es: {{ total_costo }}</p>
+    
+    <form action="{{ url_for('finalizar_pedido') }}" method="POST" style="margin-bottom: 15px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-success">Confirmar</button>
+    </form>
+
+    <form action="{{ url_for('cancelar_pedido') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-danger">Cancelar Pedido</button>
+    </form>
+{% endblock %}

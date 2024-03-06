@@ -19,3 +19,14 @@ class Maestros(db.Model):
     edad=db.Column(db.Integer())
     create_date=db.Column(db.DateTime, default=datetime.datetime.now)
     
+class Pedido(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False)
+    direccion = db.Column(db.String(100), nullable=False)
+    telefono = db.Column(db.String(15), nullable=False)
+    tamano_pizza = db.Column(db.String(20), nullable=False)
+    ingredientes = db.Column(db.String(100), nullable=False)
+    num_pizzas = db.Column(db.Integer, nullable=False)
+    subtotal = db.Column(db.Float, nullable=False)
+    fecha_pedido = db.Column(db.DateTime, default=datetime.datetime.now)
+    

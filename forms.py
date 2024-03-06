@@ -1,5 +1,5 @@
 from wtforms import Form
-from wtforms import StringField, TextAreaField,SelectField, RadioField, IntegerField
+from wtforms import StringField, TextAreaField,SelectField, RadioField, IntegerField, BooleanField, DateField
 from wtforms import EmailField
 from wtforms import validators
 
@@ -46,3 +46,26 @@ class UserForm3(Form):
     edad=IntegerField('edad',[
         validators.number_range(min=1,max=99,message='valor no válido')
     ])
+    
+class PizzeriaForm(Form):
+    nombre=StringField("Nombre",[
+        validators.DataRequired(message='El campo es requerido'),
+        validators.length(min=4,max=20,message='Ingrese nombre válido')
+        ])
+    direccion=StringField("Direccion",[
+        validators.DataRequired(message='El campo es requerido'),
+        validators.length(min=4,max=20,message='Ingrese dirección válida')
+        ])
+    telefono=StringField('Telefono',[
+        validators.length(min=1,max=11,message='valor no válido')
+    ])
+    tamanioPizza=RadioField('Tamaño Pizza',choices=[('Chica','Chica $40'),('Mediana','Mediana $80'),('Grande','Grande  $120')])
+    jamon=BooleanField('Jamón $10')
+    pinia=BooleanField('Piña $10')
+    champiniones=BooleanField('Champiñones $10')
+    numPizzas=IntegerField("Num de Pizzas",[validators.number_range(min=1,max=99, message='Valor no válido')])
+    
+class VentasForm(Form):
+    fecha = DateField('Fecha', validators=[validators.DataRequired()], format='%Y-%m-%d')
+    tipo = RadioField('Tipo', choices=[('dia', 'Día'), ('mes', 'Mes'), ('todos', 'Todos')], default='todos')
+    
