@@ -64,8 +64,14 @@ class PizzeriaForm(Form):
     pinia=BooleanField('Piña $10')
     champiniones=BooleanField('Champiñones $10')
     numPizzas=IntegerField("Num de Pizzas",[validators.number_range(min=1,max=99, message='Valor no válido')])
+    fechaPedido = DateField('Fecha', validators=[validators.DataRequired()], format='%Y-%m-%d')
+
     
+from wtforms import Form, DateField, RadioField, validators
+
 class VentasForm(Form):
-    fecha = DateField('Fecha', validators=[validators.DataRequired()], format='%Y-%m-%d')
+    dia = StringField('Día de la Semana')
+    mes = StringField('Mes')
+    ano = StringField('Año')  # Agrega un campo para el año
+
     tipo = RadioField('Tipo', choices=[('dia', 'Día'), ('mes', 'Mes'), ('todos', 'Todos')], default='todos')
-    

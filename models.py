@@ -29,4 +29,8 @@ class Pedido(db.Model):
     num_pizzas = db.Column(db.Integer, nullable=False)
     subtotal = db.Column(db.Float, nullable=False)
     fecha_pedido = db.Column(db.DateTime, default=datetime.datetime.now)
+    nombre_dia_semana = db.Column(db.String(20))
+    dia_del_mes = db.Column(db.Integer)
+    numero_mes = db.Column(db.Integer)
+    ano = db.Column(db.Integer)
     

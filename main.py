@@ -1,12 +1,12 @@
-from flask import Flask,request,render_template,flash, g, redirect, url_for
+from flask import Flask, request, render_template, flash, redirect, url_for
 from flask_wtf.csrf import CSRFProtect
 from config import DevelopmentConfig
 from models import db
-from models import Alumnos,Maestros,Pedido
+from models import Alumnos, Maestros, Pedido
 import forms
-from sqlalchemy import func
-
-
+from sqlalchemy import func, cast, Date
+from datetime import datetime, timedelta
+from sqlalchemy.sql.expression import text
 
 app=Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -62,7 +62,7 @@ def pizzas():
         )
 
         order_data = {
-            'ID': len(orders) + 1,  
+            'ID': len(orders) + 1,
             'Nombre': form.nombre.data,
             'Direccion': form.direccion.data,
             'Telefono': form.telefono.data,
@@ -71,15 +71,37 @@ def pizzas():
                                                                             ('Piña', form.pinia.data),
                                                                             ('Champiñones', form.champiniones.data)] if value]),
             'Num. Pizzas': form.numPizzas.data,
-            'Subtotal': subtotal
+            'Subtotal': subtotal,
+            'FechaPedido': form.fechaPedido.data
         }
         orders.append(order_data)
 
+    if orders:  
+        form.nombre.data = orders[0]['Nombre']
+        form.direccion.data = orders[0]['Direccion']
+        form.telefono.data = orders[0]['Telefono']
+        form.fechaPedido.data = orders[0]['FechaPedido']
+        print("ordenesPizzas: {}".format(orders[0]))
+
     return render_template('pizzas.html', form=form, orders=orders)
+
+dias_en_ingles = {
+    "Monday": "Lunes",
+    "Tuesday": "Martes",
+    "Wednesday": "Miercoles",
+    "Thursday": "Jueves",
+    "Friday": "Viernes",
+    "Saturday": "Sabado",
+    "Sunday": "Domingo"
+}
+
 
 @app.route("/finalizar_pedido", methods=["GET", "POST"])
 def finalizar_pedido():
     for order in orders:
+        fecha_pedido = order['FechaPedido']
+        nombre_dia_semana_es = dias_en_ingles.get(fecha_pedido.strftime('%A'), 'Desconocido')
+        
         pedido = Pedido(
             nombre=order['Nombre'],
             direccion=order['Direccion'],
@@ -87,8 +109,12 @@ def finalizar_pedido():
             tamano_pizza=order['Tamano'],
             ingredientes=order['Ingredientes'],
             num_pizzas=order['Num. Pizzas'],
-            subtotal=order['Subtotal']
-            
+            subtotal=order['Subtotal'],
+            fecha_pedido=fecha_pedido,
+            nombre_dia_semana=nombre_dia_semana_es,
+            dia_del_mes=fecha_pedido.day,
+            numero_mes=fecha_pedido.month,
+            ano=fecha_pedido.year
         )
         db.session.add(pedido)
 
@@ -113,14 +139,28 @@ def confirmar_pedido():
 
 @app.route("/remove_order", methods=["POST"])
 def remove_order():
+    
     order_id = int(request.form.get('order_id'))
 
-    
     for order in orders:
         if order['ID'] == order_id:
             orders.remove(order)
+            flash("Pedido eliminado con éxito.")
             break
 
+    if orders:
+        form = forms.PizzeriaForm(request.form)
+        form.nombre.data = orders[0]['Nombre']
+        form.direccion.data = orders[0]['Direccion']
+        form.telefono.data = orders[0]['Telefono']
+        form.tamanioPizza.data = orders[0]['Tamano']
+        form.fechaPedido.data = orders[0]['FechaPedido']
+        
+    else:
+        flash("No hay pedidos disponibles.")
+        return redirect(url_for('pizzas'))
+
+    print("ordenes: {}".format(orders))
     return redirect(url_for('pizzas'))
 
 def calcular_subtotal(tamanio, jamon, pinia, champiniones, num_pizzas):
@@ -171,54 +211,133 @@ def alumnos():
         print("amaterno:{}".format(ama))
     return render_template('alumnos.html',form=alum_form,nombre=nombre,apaterno=apa,amaterno=ama)
 
-from sqlalchemy import cast, Date
 
+from flask import render_template, request
 from sqlalchemy import func, cast, Date
-import datetime
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
-from sqlalchemy import func, cast, Date
-from sqlalchemy.sql.expression import text
 
-# ...
 
-@app.route("/ventas_acumuladas", methods=["GET", "POST"])
+
+
+
+
+days_of_week = {
+    "lunes": 1,
+    "martes": 2,
+    "miércoles": 3,
+    "jueves": 4,
+    "viernes": 5,
+    "sábado": 6,
+    "domingo": 7
+}
+
+months = {
+    "enero": 1,
+    "febrero": 2,
+    "marzo": 3,
+    "abril": 4,
+    "mayo": 5,
+    "junio": 6,
+    "julio": 7,
+    "agosto": 8,
+    "septiembre": 9,
+    "octubre": 10,
+    "noviembre": 11,
+    "diciembre": 12
+}
+
+
+from sqlalchemy import func
+
+@app.route('/ventas_acumuladas', methods=['GET', 'POST'])
 def ventas_acumuladas():
     form = forms.VentasForm(request.form)
 
     if request.method == 'POST' and form.validate():
-        fecha_ingresada = form.fecha.data
+        dia = form.dia.data
+        mes = form.mes.data
+        ano = form.ano.data
+        tipo = form.tipo.data
+        
+        print(dia, mes, ano, tipo)
 
-        if form.tipo.data == 'dia':
-            ventas = db.session.query(func.date(Pedido.fecha_pedido).label('Fecha'),
-                                      func.sum(Pedido.subtotal).label('TotalVentas')) \
-                .filter(cast(Pedido.fecha_pedido, Date) == fecha_ingresada) \
-                .group_by(func.date(Pedido.fecha_pedido)) \
-                .order_by('Fecha') \
-                .all()
-            tipo = 'Día'
-        elif form.tipo.data == 'mes':
-            ventas = db.session.query(func.DATE_FORMAT(Pedido.fecha_pedido, '%Y-%m-01').label('Fecha'),
-                                      func.sum(Pedido.subtotal).label('TotalVentas')) \
-                .filter(func.DATE_FORMAT(Pedido.fecha_pedido, '%Y-%m') == fecha_ingresada.strftime('%Y-%m')) \
-                .group_by(func.DATE_FORMAT(Pedido.fecha_pedido, '%Y-%m-01')) \
-                .order_by('Fecha') \
-                .all()
-            tipo = 'Mes'
-        else:
-            ventas = db.session.query(func.date(Pedido.fecha_pedido).label('Fecha'),
-                                      func.sum(Pedido.subtotal).label('TotalVentas')) \
-                .group_by(func.date(Pedido.fecha_pedido)) \
-                .order_by('Fecha') \
-                .all()
-            tipo = 'Todos'
+        consulta = Pedido.query
 
-        return render_template('ventas_acumuladas.html', form=form, ventas=ventas, tipo=tipo)
+        if tipo == 'dia' and dia:
+            if dia.isdigit():
+                dia_nombre = {v: k for k, v in days_of_week.items()}.get(int(dia))
+                if dia_nombre:
+                    consulta = consulta.filter(Pedido.nombre_dia_semana == dia_nombre)
+            else:
+                consulta = consulta.filter(Pedido.nombre_dia_semana == dia)
+        elif tipo == 'mes' and mes:
+            if mes.isdigit():
+                mes_nombre = {v: k for k, v in months.items()}.get(int(mes))
+                if mes_nombre:
+                    consulta = consulta.filter(Pedido.numero_mes == int(mes))
+            else:
+                mes_numero = months.get(mes.lower())
+                if mes_numero:
+                    consulta = consulta.filter(Pedido.numero_mes == mes_numero)
+        elif tipo == 'todos':
+            pass
 
-    return render_template('ventas_acumuladas.html', form=form, ventas=None, tipo='Todos')
+        if ano:
+            consulta = consulta.filter(Pedido.ano == int(ano))
+
+        ventas_agrupadas = consulta.group_by(Pedido.fecha_pedido, Pedido.nombre).with_entities(
+            Pedido.fecha_pedido,
+            Pedido.nombre,
+            func.sum(Pedido.subtotal).label('total_subtotal')
+        ).all()
+
+        total_todas_las_ventas = sum(venta.total_subtotal for venta in ventas_agrupadas)
+
+        return render_template('ventas_acumuladas.html', form=form, ventas=ventas_agrupadas, total_todas_las_ventas=total_todas_las_ventas, tipo=tipo)
+
+    return render_template('ventas_acumuladas.html', form=form, ventas=None, total_todas_las_ventas=None, tipo=None)
 
 
 
 
+
+
+
+
+from sqlalchemy import func, text
+
+
+
+
+
+
+def obtener_resultados(fecha_ingresada, tipo):
+    if tipo == 'dia':
+        resultados = db.session.query(
+            Pedido.nombre_dia_semana.label('DiaSemana'),
+            Pedido.nombre.label('NombreCliente'),
+            func.sum(Pedido.subtotal).label('TotalVentas')
+        ) \
+            .filter(Pedido.nombre_dia_semana == fecha_ingresada.lower()) \
+            .group_by(Pedido.nombre_dia_semana, Pedido.nombre) \
+            .order_by('DiaSemana', Pedido.nombre) \
+            .all()
+    elif tipo == 'mes':
+        resultados = db.session.query(
+            Pedido.numero_mes.label('NumeroMes'),
+            Pedido.nombre.label('NombreCliente'),
+            func.sum(Pedido.subtotal).label('TotalVentas')
+        ) \
+            .filter(Pedido.numero_mes == fecha_ingresada.month) \
+            .group_by(Pedido.numero_mes, Pedido.nombre) \
+            .order_by('NumeroMes', Pedido.nombre) \
+            .all()
+    else:
+        resultados = []
+
+    return resultados
 
 
 

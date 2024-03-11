@@ -5,37 +5,52 @@
 
     <form action="{{ url_for('ventas_acumuladas') }}" method="POST" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
         <div class="form-group">
-            {{ form.fecha.label }}
-            {{ form.fecha(class="form-control") }}
+            {{ form.dia.label }}
+            {{ form.dia(class="form-control") }}
         </div>
+
+        <div class="form-group">
+            {{ form.mes.label }}
+            {{ form.mes(class="form-control") }}
+        </div>
+
         <div class="form-group">
             {{ form.tipo.label }}
-            {{ form.tipo(class="form-control") }}
+            {{ form.tipo() }}
         </div>
+    
+        
         <button type="submit" class="btn btn-primary">Buscar</button>
     </form>
     
 
     {% if ventas %}
-        <h2>Ventas Acumuladas por {{ tipo }}</h2>
-        <table class="table table-striped">
-            <thead>
+    <h2>Ventas Acumuladas por {{ tipo }}</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Nombre del Cliente</th>
+                <th>Total del Pedido</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for venta in ventas %}
                 <tr>
-                    <th>Fecha</th>
-                    <th>Total Ventas</th>
+                    <td>{{ venta.fecha_pedido }}</td>
+                    <td>{{ venta.nombre }}</td>
+                    <td>${{ venta.total_subtotal }}</td> <!-- Asegúrate de que este campo exista y contenga el total del pedido -->
                 </tr>
-            </thead>
-            <tbody>
-                {% for venta in ventas %}
-                    <tr>
-                        <td>{{ venta.Fecha }}</td>
-                        <td>${{ venta.TotalVentas }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            {% endfor %}
+            <tr>
+                <td colspan="2"><strong>Total de Todas las Ventas</strong></td>
+                <td><strong>${{ total_todas_las_ventas }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
     {% else %}
-        <p>No hay datos disponibles.</p>
+    <p>No hay datos disponibles.</p>
     {% endif %}
 {% endblock %}
